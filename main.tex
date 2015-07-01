@@ -14,7 +14,7 @@
 \usepackage{float}
 \usepackage{url}
 \usepackage[linesnumbered]{algorithm2e}
-
+\usepackage{minted}
 
 \graphicspath{{imagenes/}}
 
@@ -83,13 +83,179 @@ Las bases de datos NoSQL surgen como una solución al problema de escalar ante l
 El término SQL se refiere a un lenguaje de programación utilizado para interactuar con las bases de datos. Las bases de datos NoSQL no necesariamente proveen la capacidad de interactuar con ellas a través de este lenguaje e incluso pueden tampoco ofrecer alternativas análogas para todas las operaciones permitidas típicamente.
 
 \section{Apache Cassandra}
-Apacha Cassandra es una base de datos NoSQL distribuida. El proyecto es de código abierto y está originalmente escrito en Java. En lugar del sistema típico de tablas utilizado en las bases de datos relacionales, se basa en un modelo de \textit{clave-valor}. El modelo se basa en contenedores: cada contenedor posee tantos pares de clave y valor como uno quiera. Un contenedor puede contener por ejemplo pares de (libreta, nombre alumno). Uno de los puntos fuertes de esta base de datos es la escalabilidad lineal en función de los nodos, uno puede agregar tantos como necesite hasta obtener la capacidad deseada sin inconvenientes ni interrupción del servicio. La naturaleza distribuida de esta base de datos no le da más importancia a ninguno de los nodos por los cuales está constituida, no posee ningún nodo maestro. Esto la hace robusta frente a la posibilidad de que múltiples nodos caigan y se logra manteniendo cierto nivel de redundancia dentro del sistema.
+\subsection{Modelo}
+Apacha Cassandra es una base de datos NoSQL distribuida. El proyecto es de código abierto y está originalmente escrito en Java. Se basa en un modelo de \textit{clave-valor}, utiliza el concepto de contenedores: cada contenedor posee tantos pares de clave y valor como uno quiera. En estos contenedores se guardan ``familias de columnas'' el análogo a las tablas en las bases de datos relacionales. Si las tablas se pueden ver como listas de listas, entonces estas familias se pueden ver como pares (clave, valor) anidados. El análogo a una base de datos es el llamado \textit{KeySpace} o contenedor. Veamos un ejemplo:
 
-Como hacer consultas
-No tiene servidor maestro.
-Protocolo P2P.
-Reundancia
-No soporta JOINS
-soport mapreduce
+\begin{listing}
+\begin{minted}[frame=single,
+               framesep=3mm,
+               linenos=true,
+               xleftmargin=21pt,
+               tabsize=4]{js}
+{
+	"user1": {
+           "Bio": {
+                   "name": "John Smith",
+                   "age" : 23
+           }
+    },
+    "user2": {
+           "Bio": {
+                   "name": "Adam Goldstein",
+                   "profession": "Developer"
+           },
+           "Education": {
+                   "bachelors": "Computer Science"
+           }
+    }
+}
+\end{minted}
+\caption{Pares clave-valor} 
+\label{json-example}
+\end{listing}
+
+En el ejemplo se puede ver un primer nivel en donde las claves son ID's de usuarios y los valores son a su vez pares de (clave, valor). Para el usuario 1 se tiene la clave Bio que tiene como valor otro conjunto de (clave, valor) anidado albergando nombre y edad. El usuario 2 tiene además de la clave Bio, una clave Education. Como se puede ver la información se encuentra desestructurada y en principio no hay restricciones en cuanto a la forma en que se anidan estas familias de columnas. Bio para el usuario 1 guarda nombre y edad mientras que para el segundo guarda nombre y profesión. El primer nivel de profundidad en estos pares anidados es conocido como filas (user1, user2), el segundo nivel son las familias de columnas (Bio, Education) y finalmente dentro de estas familias se encuentran las columnas. Por cómo es el modelo también se pueden crear estructuras con \textit{super columnas} que es básicamente incrementar el nivel de profundidad de estos pares anidados agregando columnas dentro de las columnas.
+
+Este modelo simple y desestructurado sin embargo tiene sus desventajas. Por ejemplo si uno quisiera ordenar o agrupar por determinado campo, es necesario que este forme parte de la clave para esa fila. Cuando la clave está compuesta por un solo elemento como en el caso de los usuarios (tenía solo los ID's: user1, user2) se llama clave primaria. Cuando la clave está compuesta por múltiples elementos se denomina clave compuesta y se divide en dos partes: la partition key y la clustering key. La partition key es la mínima cantidad de datos que hay que meter en una query para poder obtener las filas deseadas, la clustering key son datos extra que sirven por ejemplo para aprovechar las capacidades de ordenamiento. En el primer ejemplo se tiene una clave simple, por lo tanto es una clave primaria, la mínima cantidad de datos necesaria para obtener una fila es el id del usuario. En el siguiente ejemplo se almacenan empleados en una base de datos y se tiene una clave compuesta por compañía y nombre: la partition key es la compañía y por lo tanto con este alcanza para obtener la fila deseada, la clustering key es el nombre y nos servirá por ejemplo para ordenar. Internamente Cassandra guarda la clustering key como columnas compuestas, como se puede ver en el ejemplo. Como mencionaremos posteriormente la partition key es muy importante para determinar cómo se reparten las filas entre los nodos, es decir cómo se decide qué nodo guarda cada porción de datos.
+
+\begin{table}[h]
+\centering
+\caption{Contenido}
+\label{my-label}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Company & Name & Age & Role \\ \hline
+OSC     & Eric & 38  & ceo  \\ \hline
+OSC     & John & 37  & dev  \\ \hline
+RKG     & Anya & 29  & lead \\ \hline
+RKG     & Ben  & 27  & dev  \\ \hline
+RKG     & Chad & 35  & ops  \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{listing}
+\begin{minted}[frame=single,
+               framesep=3mm,
+               linenos=true,
+               xleftmargin=21pt,
+               tabsize=4]{js}
+{
+	"OSC": {
+           "eric:age": 38,
+		   "eric:role": "ceo",
+		   "john:age": 37,
+		   "john:role": "dev",
+    },
+    "RKG": {
+           "anya:age": 29,
+		   "anya:role": "lead",
+		   "ben:age": 27,
+		   "ben:role": "dev",
+		   "chad:age": 35,
+		   "chad:role": "ops"
+    }
+}
+\end{minted}
+\caption{Pares clave-valor con clave primaria compuesta} 
+\label{json-example}
+\end{listing}
+
+Hay varias operaciones tradicionales que no están permitidas, por ejemplo un JOIN.
+
+\subsection{¿Cómo almacena Cassandra los datos en los nodos?}
+Cassandra reparte los datos uniformemente entre los nodos de un cluster. Generalmente este conjunto de nodos es visualizado como un anillo donde cada nodo tiene dos vecinos. A cada nodo se le asigna la responsabilidad sobre un rango de hashes. Este rango puede ser configurado de diversas maneras, pero la idea general es distribuir los datos de la forma más equitativa posible. Cada update que se le hace a la base de datos para agregar una fila contiene una clave primaria (o partition key en el caso de que sea compuesta), esta clave es hasheada y luego se busca qué nodo dentro del cluster es responsable de ese update en base al resultado. Luego el dato es guardado \textit{n} veces en distintos nodos dentro del cluster, ese \textit{n} es configurado a través del \textit{replication factor} asignado al \textit{keyspace}. Todos los nodos son iguales y las escrituras y lecturas pueden ser realizadas a través de cualquier nodo ya sea este responsable o no del hash de la clave primaria. No hay un nodo maestro. Los nodos aprenden constantemente sobre la estructura general del cluster a través de un protocolo estilo Gossip \footnote{ https://en.wikipedia.org/wiki/Gossip\_protocol } , utilizando una comunicación \textit{peer-to-peer}. El nodo al que se le realiza la consulta o escritura es denominado nodo coordinador. Este nodo encontrará a los nodos responsables para esta acción y una vez que consiga el resultado lo devolverá. \\
+
+
+\centerline{\includegraphics[scale=0.5]{imagenes/cassandra-ring}}
+
+Cuando se realiza un update de una fila primero se guarda la escritura en el commit log, posteriormente se escribe a memoria. Esta tabla es utilizada hasta llegar a su tamaño máximo (que también es configurable) y posteriormente es flusheada a una en disco denominada \textit{SSTable}. Si hay un fallo en alguno de los nodos, los eventos son ejecutados nuevamente desde el commit log para recuperar el estado deseado a pesar de que la tabla en memoria no hubiera sido flusheada a disco. \\
+
+\centerline{\includegraphics[scale=0.5]{imagenes/cassandra-ring-2}}
+
+\subsection{¿Cómo se hacen las consultas en Cassandra?}
+
+Hay numerosas formas de interactuar con los datos almacenados en la base de datos. La más familiar para los usuarios que provienen de utilizar bases de datos relacionales es sin duda \textit{CQL}. Este lenguaje provee una sintaxis similar a la de \textit{SQL} para realizar un subconjunto de las operaciones de este, recordemos que Cassandra es incapaz de por ejemplo realizar JOINS. Debido a su estructura interna ciertas operaciones pierden sentido y esto implica que la morfología de la base tenga que ser pensada desde otro punto de vista. A la hora de modelar la base de datos se tendrá que tener en cuenta estas limitaciones. Veamos un ejemplo de CQL:
+
+\begin{lstlisting}
+
+CREATE KEYSPACE demo
+WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+
+CREATE TABLE users (
+  user_name varchar PRIMARY KEY,
+  password varchar,
+  birth_year bigint
+);
+ \end{lstlisting}
+
+Primero creamos un \textit{KeySpace} o contenedor en donde almacenar nuestro mapa de (clave, valor). Al hacer esto podemos configurar características como el factor de replicación del que se habló anteriormente y la estrategia que se utilizará para la replicación de las filas \footnote{ \href{http://docs.datastax.com/en/cassandra/2.0/cassandra/architecture/architectureDataDistributeReplication_c.html}{SimpleStrategy}:
+Use only for a single data center. SimpleStrategy places the first replica on a node determined by the partitioner. Additional replicas are placed on the next nodes clockwise in the ring without considering topology (rack or data center location).} \footnote{http://blogs.atlassian.com/2013/09/do-you-know-cassandra/} . Si se tienen muchas claves, el orden en el que se declaran es importante por que determinará cuáles corresponderán a la partition key y cuáles a la clustering. Esto también se puede indicar de manera explícita para no depender del orden.
+
+Posteriormente se crea una ``tabla'' que en realidad Cassandra internamente guarda dentro de su KeySpace de la siguiente forma, teniendo en cuenta los siguientes datos:
+
+\begin{table}[h]
+\centering
+\caption{Tabla con datos al estilo ``relacional''}
+\label{my-label}
+\begin{tabular}{|l|l|l|l|}
+\hline
+user\_name & password & birth\_year \\ \hline
+pepe1      & asdasd   & 1990        \\ \hline
+robert18   & qweqwe   & 1987        \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{listing}
+\begin{minted}[frame=single,
+               framesep=3mm,
+               linenos=true,
+               xleftmargin=21pt,
+               tabsize=4]{js}
+{
+	"pepe1": {
+           "password": "asdasd",
+		   "birth_year": "1990"
+    },
+    "robert18": {
+           "password": "qweqwe",
+		   "birth_year": "1987"
+    }
+}
+\end{minted}
+\caption{Mapeo de tabla en modelo relacional a Cassandra según CQL} 
+\label{json-example}
+\end{listing}
+
+\begin{lstlisting}
+INSERT INTO users (user_name, password, birth_year)
+VALUES ('john46', 'zxczxc', '1991');
+
+SELECT * FROM users WHERE user_name= 'john46';
+\end{lstlisting}
+
+Insertar valores y obtenerlos es similar a SQL también. Recordemos que para hacer cualquiera de estas operaciones es necesario como mínimo pasar el conjunto de elementos dentro de la partition key en la consulta. Es decir, como mínimo se necesitan los elementos para que el nodo coordinador pueda hashear la entrada y obtener la dirección del nodo que se debe encargar de hacer la réplica principal y en base a este quiénes se encargarán de hacer las redundantes.
+
+También se pueden encontrar abstracciones y drivers para distintos lenguajes de más alto nivel, por ejemplo utilizando querysets a través de python \footnote{http://datastax.github.io/python-driver/cqlengine/queryset.html}.
+
+\subsection{Casos de uso}
+
+\subsubsection{Puntos fuertes}
+Uno de los puntos fuertes de esta base de datos es la escalabilidad lineal en función de los nodos, uno puede agregar tantos como necesite hasta obtener la capacidad deseada sin inconvenientes ni interrupción del servicio. La naturaleza distribuida de esta base de datos no le da más importancia a ninguno de los nodos por los cuales está constituida, no posee ningún nodo maestro y además utiliza protocolos peer-to-peer para la comunicación entre ellos. Esto sumado a que posee cierta redundancia de la información entre los distintos nodos la hace una base bastante robusta y resistente frente a la posible caida de alguno de los nodos.
+
+Todas estas características la hacen una herramienta ideal para el problema que se mencionó al principio del documento: la escalabilidad frente a un flujo masivo de datos, en un contexto donde la consistencia no es un requisito en todo momento. Un contexto donde la consistencia eventual, propagando la información a través de los nodos a lo largo del tiempo es suficiente. A diferencia de las bases de datos relacionales los \textit{write} son muy baratos, y si los datos se distribuyen uniformemente y de manera equitativa entre todos los nodos del anillo, entonces los \textit{read} también lo serán. Veamos a continuación algunos ejemplos de la vida real.
+
+\subsubsection{eBay}
+El conocido servico de compra-venta utiliza Cassandra para servir varios de sus datos: social signals en sus productos, grafo de gustos para recomendar productos a sus usuarios, notificaciones móbiles, etc. Por otro lado no la utilizan para otros casos de uso como Big Data. Algunas características del deploy de Cassandra de eBay son: más de 200 TB de información, más de 400 millones de writes por día y más de 100 millones de reads por día. \footnote{http://www.slideshare.net/jaykumarpatel/cassandra-at-ebay-13920376}
+
+\subsubsection{Netflix}
+
+\subsubsection{Otros}
+
+\begin{itemize}
+	\item \href{http://www.slideshare.net/adrianco/migrating-netflix-from-oracle-to-global-cassandra}{Netflix}: Migración de Oracle a Cassandra
+    \item \href{http://indico.cern.ch/event/93877/session/14/material/poster/0?contribId=19}{CERN}
+	\item \href{http://live-pc-development.pantheon.io/blog/analytics-at-github-with-apache-cassandra/}{GitHub}
+	\item Y muchos más en el sitio oficial de \href{http://cassandra.apache.org/}{Apache Cassandra}.
+\end{itemize}
 
 \end{document}
