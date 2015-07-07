@@ -1,16 +1,16 @@
 .PHONY: all
-LATEX=pdflatex
-ARCHIVOS=informe.tex
-all: informe.pdf	
+LATEX=pdflatex -shell-escape
+ARCHIVOS=main.tex
+all: main.pdf	
 
-informe.pdf: $(ARCHIVOS)
+main.pdf: $(ARCHIVOS)
 	reset
 	@echo "Compiling informe in latex..."
 #se hace 2 veces el latex para que cargue bien la TOC y redirije todo a loginforme para no imprimir 23098230982309823 lineas en el makefile.
-	$(LATEX) informe.tex
-	$(LATEX) informe.tex
-	#okular informe.pdf
-	evince informe.pdf &
+	$(LATEX) main.tex
+	$(LATEX) main.tex
+	#okular main.pdf
+	evince main.pdf &
 clean: 
 	@echo "Cleaning informe"	
 	- rm -f *.loginforme
