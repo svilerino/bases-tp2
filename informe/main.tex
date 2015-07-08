@@ -268,12 +268,12 @@ Todas estas características la hacen una herramienta ideal para el problema que
 El conocido servico de compra-venta utiliza Cassandra para servir varios de sus datos: social signals en sus productos, grafo de gustos para recomendar productos a sus usuarios, notificaciones móviles, etc. Por otro lado no la utilizan para otros casos de uso como Big Data. Algunas características del deploy de Cassandra de eBay son: más de 200 TB de información, más de 400 millones de writes por día y más de 100 millones de reads por día. \footnote{http://www.slideshare.net/jaykumarpatel/cassandra-at-ebay-13920376}
 
 \subsubsection{Netflix}
+El relativamente nuevo servicio de streaming de contenido utiliza Cassandra para almacenar las interacciones entre los subscriptores y sus contenidos descargados. Necesita poder manejar bases de datos distribuidas por todo el planeta(mas de 40 paises). En las fuentes se presenta una diapositiva explanatoria en detalle acerca de la migracion del datacenter relacional a cassandra.
+\footnote{http://www.slideshare.net/adrianco/migrating-netflix-from-oracle-to-global-cassandra}
 
 \subsubsection{Otros}
 
 \begin{itemize}
-	\item \href{http://www.slideshare.net/adrianco/migrating-netflix-from-oracle-to-global-cassandra}{Netflix}: Migración de Oracle a Cassandra
-    \item \href{http://indico.cern.ch/event/93877/session/14/material/poster/0?contribId=19}{CERN}
 	\item \href{http://live-pc-development.pantheon.io/blog/analytics-at-github-with-apache-cassandra/}{GitHub}
 	\item Y muchos más en el sitio oficial de \href{http://cassandra.apache.org/}{Apache Cassandra}.
 \end{itemize}
