@@ -1,0 +1,94 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usetheme{Warsaw}
+
+\beamertemplatenavigationsymbolsempty 
+
+\title{Bases de Datos No-SQL - Cassandra}
+\author{Chapresto, Garassino, Vileriño}
+\date{10 de julio de 2015}
+
+\begin{document}
+
+\begin{frame}
+  \maketitle
+\end{frame}
+
+\begin{frame}
+  \frametitle{Intro a No-SQL}    
+  \framesubtitle{Porque No-SQL?}
+  \begin{itemize}
+    \setlength{\itemsep}{3pt}
+    \item Crecimiento exponencial de dispositivos conectados a internet
+    \pause
+    \item Enorme cantidad de nuevos servicios prestados en la nube.
+    \pause
+    \item Necesidad de escalar rapidamente ante el crecimiento de la demanda.
+    \pause
+    \item Necesidad de alta disponibilidad, sin downtimes.
+    \pause
+    \item Bases de datos relacionales no funcionan del todo bien en estos contextos.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Intro a No-SQL}    
+  \framesubtitle{Bases de datos relacionales en problemas}
+  \begin{itemize}
+    \setlength{\itemsep}{3pt}
+    \item Las bd relacionales son buenas para la modificacion de datos manteniendo la consistencia. 
+    \pause
+    \item Respetan las propiedades llamadas ACID.
+    \pause
+    \item Las propiedades ACID son deseables pero no siempre necesarias bajo ciertos contextos.
+    \pause
+    \item Cuando se comenzaron a utilizar sistemas distribuidos por los grandes volumenes de datos se not\'o que los motores relacionales no lograban desarrollar todo su potencial.
+    \pause
+    \item Teorema CAP: Solo se pueden tener 2 de las 3 caracteristicas: Consistencia, Disponibilidad, Tolerancia a la particion. 
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Intro a No-SQL}    
+  \framesubtitle{Bases de datos No SQL}
+  \begin{itemize}
+    \setlength{\itemsep}{3pt}
+    \item Surgen como solucion al problema de escalar horizontalmente
+    \pause
+    \item Se sacrifica en cierto grado alguna de las propiedades tradicionales(ie. Consistencia) en favor de la capacidad de escalar horizontalmente.
+    \pause
+    \item Se puede escalar agregando nuevos nodos \texttt{on the fly} sin perder disponibilidad(No downtime).
+    \pause
+    \item Principio de consistencia eventual: A pesar de que la base de datos pueda ser momentaneamente inconsistente, el estado del sistema se modificara de manera autonoma hasta converger a la consistencia.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cassandra}
+  \framesubtitle{En que contextos usar Cassandra}
+  \begin{itemize}
+    \setlength{\itemsep}{3pt}
+    \item \textbf{Arquitectura descentralizada:} No existe SPOF. Los nodos se comunican con protocolos p2p. Cada nodo puede satisfacer cualquier request.
+    \pause
+    \item \textbf{Replicacion a lo largo de varios data-centers: } Cassandra esta pensado para ser desplegado en un gran numero de nodos, manteniendo redundancia de datos para proveer alta disponibilidad.
+    \pause
+    \item \textbf{Escalable y performante: } El throughput de lecturas y escrituras aumenta linealmente con la cantidad de nodos en el sistema.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cassandra}
+  \framesubtitle{En que contextos usar Cassandra}
+  \begin{itemize}
+    \setlength{\itemsep}{3pt}
+    \item \textbf{Tolerante a fallas: } La replicacion en multiples nodos brinda resistencia ante la caida de alguno de ellos. Los nodos que fallan son reemplazables sin downtime.
+    \pause
+    \item \textbf{Multiples niveles de consistencia: } Lecturas y escrituras ofrecen diferentes niveles de consistencia, desde ``las escrituras jamas fallan'' hasta ``bloquear lecturas hasta tener todas las replicas'', con mecanismos de quorum \footnote{ \href{https://en.wikipedia.org/wiki/Quorum_(distributed_computing)}{Tecnicas basadas en quorum para sistemas distribuidos} Wikipedia} como punto intermedio.
+    \pause
+    \item \textbf{Interface legacy: } Cassandra introduce el lenguaje CQL, parecido a SQL para realizar operaciones \textbf{permitidas}(Recordar que no se pueden hacer joins por ejemplo.).
+  \end{itemize}
+\end{frame}
+
+
+\end{document}
