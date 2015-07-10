@@ -104,9 +104,9 @@
     \pause
     \item A cada nodo se le asigna la responsabilidad sobre un rango de hashes. El rango debe configurarse de forma de distribuirlos datos de la forma mas equitativa posible. 
     \pause
-    \item Cada update que se le hace a la base de datos para agregar una fila contiene una clave primaria. Esta clave es hasheada y sebusca que nodo es responsable del update.
+    \item Cada update que se le hace a la base de datos para agregar una fila contiene una clave primaria. Esta clave es hasheada y se busca que nodo es responsable del update.
     \pause
-    \item Los nodos aprenden de la estructura general del cluster a traves deun protocolo P2P.
+    \item Los nodos aprenden de la estructura general del cluster a traves de un protocolo P2P.
 
 
     \end{itemize}
@@ -286,5 +286,61 @@
     \end{itemize}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Lenguaje de Consultas: CQL}
+  \framesubtitle{Intro}
+   
+  \begin{itemize}
+    \setlength{\itemsep}{4pt}
+    \item Provee una sintaxis similar a SQL.
+    \pause
+    \item Permite realizar ciertas operaciones(recordemos que no se pueden hacer joins, esta logica sube como feature de la aplicacion que usa cassandra)
+    \pause
+    \item Hay que tener en cuenta estas limitaciones de CQL a la hora de modelar la base de datos.
+    \pause
+    \item Permite integracion con lenguajes de programacion: Python, Java, etc.
+    \pause
+    \item Ejemplo en el informe.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Clientes de Cassandra}
+  \framesubtitle{Netflix}
+    \begin{itemize}
+    \setlength{\itemsep}{5pt}
+    \item Almacenar interacciones entre subscriptores y sus contenidos descargados.
+    \pause
+    \item Maneja bases de datos distribuidas por todo el planeta (mas de 40 paises)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Clientes de Cassandra}
+  \framesubtitle{Netflix}
+   \begin{figure}[h!]
+      \centering        
+      \includegraphics[scale=0.25]{netflix.jpg}
+      \caption{Netflix}
+  \end{figure}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Clientes de Cassandra}
+  \framesubtitle{Ebay}
+  \begin{itemize}
+    \setlength{\itemsep}{4pt}
+    \item Social Signals en sus productos
+    \pause
+    \item Grafo de gustos para recomendaciones a usuarios
+    \pause
+    \item Notificaciones moviles
+    \pause 
+    \item etc
+    \pause
+    \item Manejan mas de 200TB de informacion, mas de 400 millones de writes por dia y mas de 100 millones de reads por dia
+  \end{itemize}
+\end{frame}
 
 \end{document}
